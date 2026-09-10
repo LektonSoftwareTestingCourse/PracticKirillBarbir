@@ -57,11 +57,11 @@ check_health "Bin Lookup"         "http://localhost:8096/actuator/health"
 check_health "Notification Service" "http://localhost:8097/actuator/health"
 
 # RabbitMQ Management UI — проверяем доступность
-RMQ_CODE=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:15672" --connect-timeout 5 2>/dev/null || echo "000")
+RMQ_CODE=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:15673" --connect-timeout 5 2>/dev/null || echo "000")
 if [ "$RMQ_CODE" = "200" ] || [ "$RMQ_CODE" = "302" ]; then
-    pass "RabbitMQ Management UI (http://localhost:15672) — HTTP $RMQ_CODE"
+    pass "RabbitMQ Management UI (http://localhost:15673) — HTTP $RMQ_CODE"
 else
-    fail "RabbitMQ Management UI (http://localhost:15672) — HTTP $RMQ_CODE (expected 200/302)"
+    fail "RabbitMQ Management UI (http://localhost:15673) — HTTP $RMQ_CODE (expected 200/302)"
 fi
 
 # Dashboard — может быть на 3000 и отвечать HTML, проверяем просто доступность
