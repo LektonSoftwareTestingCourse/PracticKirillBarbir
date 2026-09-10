@@ -45,10 +45,10 @@ Check-Health "Notification Service" "http://localhost:8097/actuator/health"
 
 # RabbitMQ Management UI — проверяем доступность
 try {
-    $rmq = Invoke-WebRequest -Uri "http://localhost:15672" -TimeoutSec 5 -UseBasicParsing
-    Pass "RabbitMQ Management UI (http://localhost:15672) - HTTP $($rmq.StatusCode)"
+    $rmq = Invoke-WebRequest -Uri "http://localhost:15673" -TimeoutSec 5 -UseBasicParsing
+    Pass "RabbitMQ Management UI (http://localhost:15673) - HTTP $($rmq.StatusCode)"
 } catch {
-    Fail "RabbitMQ Management UI (http://localhost:15672) - UNREACHABLE"
+    Fail "RabbitMQ Management UI (http://localhost:15673) - UNREACHABLE"
 }
 
 try {

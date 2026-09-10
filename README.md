@@ -51,7 +51,7 @@ curl -X POST http://localhost:8080/api/cards/generate \
 # 7. Запустить симулятор терминалов (50 транзакций, через Gateway)
 curl -X POST http://localhost:8080/api/simulator/terminal/run \
   -H "Content-Type: application/json" \
-  -d '{"count": 50, "scenario": "normal"}'
+  -d '{"count": 50, "scenario": "normal", "tps": 10}'
 
 # 8. Открыть дашборд: http://localhost:3000
 ```
