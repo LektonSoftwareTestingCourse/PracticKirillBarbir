@@ -7,7 +7,6 @@ expiry:             valid, current_month, expired
 terminal_type:      POS, ATM, ECOM
 mcc:                grocery, restaurant, electronics, travel
 
-
 # нет карты -> статус и лимиты фиксируем нейтральными
 IF [card_exists] = "no" THEN [card_status] = "ACTIVE"
     AND [amount_vs_daily] = "below"
@@ -20,7 +19,7 @@ IF [card_status] <> "ACTIVE" THEN [amount_vs_daily] = "below"
     AND [amount_vs_monthly] = "below"
     AND [amount_vs_balance] = "below";
 
-# срок истёк -> суммы только below.
+# срок истёк -> суммы только below
 IF [expiry] = "expired" THEN [amount_vs_balance] = "below"
     AND [amount_vs_daily] = "below"
     AND [amount_vs_monthly] = "below";

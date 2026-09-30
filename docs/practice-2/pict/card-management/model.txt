@@ -1,0 +1,58 @@
+operation:          create, get, list, patch, delete, generate, reserve
+card_exists:        yes, no
+card_status:        ACTIVE, INACTIVE, BLOCKED, EXPIRED, DELETED
+pan_validity:       valid_luhn, invalid_luhn, wrong_length
+bin_validity:       valid_6, invalid
+body_validity:      valid, empty_required, negative_number
+patch_field:        status, daily_limit, monthly_limit, available_balance
+amount_vs_balance:  below, equal, above
+
+# create/generate -> карты ещё нет, статус не читаем
+IF [operation] IN {"create", "generate"} THEN [card_exists] = "no"
+    AND [card_status] = "ACTIVE";
+
+# generate -> PAN сервис считает сам
+IF [operation] = "generate" THEN [pan_validity] = "valid_luhn";
+
+# create -> PAN сервис считает сам
+IF [operation] = "create" THEN [pan_validity] = "valid_luhn";
+
+# get/delete/list -> без тела и без суммы reserve
+IF [operation] IN {"get", "delete", "list"} THEN [body_validity] = "valid"
+    AND [amount_vs_balance] = "below";
+
+# не PATCH -> поле update не выбираем
+IF [operation] <> "patch" THEN [patch_field] = "status";
+
+# не reserve -> сумму vs баланс не крутим
+IF [operation] <> "reserve" THEN [amount_vs_balance] = "below";
+
+# list -> без конкретного PAN
+IF [operation] = "list" THEN [card_exists] = "yes"
+    AND [pan_validity] = "valid_luhn";
+
+# DELETED -> для get/patch/delete/reserve карты нет
+IF [operation] IN {"get", "patch", "delete", "reserve"} AND [card_status] = "DELETED"
+    THEN [card_exists] = "no";
+
+# нет карты -> Луна, тело и over-balance не проверяем
+IF [operation] IN {"get", "patch", "delete", "reserve"} AND [card_exists] = "no"
+    THEN [pan_validity] = "valid_luhn"
+    AND [body_validity] = "valid"
+    AND [amount_vs_balance] = "below";
+
+# нет карты и не DELETED -> статус-заглушка ACTIVE
+IF [card_exists] = "no" AND [card_status] <> "DELETED" THEN [card_status] = "ACTIVE";
+
+# невалидный BIN на create/generate -> тело иначе валидное
+IF [operation] IN {"create", "generate"} AND [bin_validity] = "invalid"
+    THEN [body_validity] = "valid";
+
+# get/patch/delete/reserve -> BIN не принимают
+IF [operation] IN {"get", "patch", "delete", "reserve"} THEN [bin_validity] = "valid_6";
+
+# битый PAN -> не мешаем с битым телом и over-balance
+IF [operation] IN {"get", "patch", "delete", "reserve"} AND [pan_validity] <> "valid_luhn"
+    THEN [body_validity] = "valid"
+    AND [amount_vs_balance] = "below"
+    AND [card_exists] = "yes";

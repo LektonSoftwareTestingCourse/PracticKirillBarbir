@@ -57,9 +57,13 @@
 
 ## 3. Попарное тестирование
 
-Для pairwise взято 8 параметров.
+### Authorization
+8 параметров: card_status, card_exists, amount_vs_daily, amount_vs_monthly, amount_vs_balance, expiry, terminal_type, mcc
 pairwise дал 31 строку.
 
+### Card-Management
+8 параметров: operation, card_exists, card_status, pan_validity, bin_validity, body_validity, patch_field, amount_vs_balance
+pairwise дал 52 строки.
 ---
 
 ## 4. Тест-кейсы
@@ -473,13 +477,47 @@ MCC: grocery
 
 ---
 
-### Попарный набор (PICT)
+### Попарный набор Authorization (PICT)
 
-Каждая строка `cases.txt` - отдельный кейс. Общие шаги: готовим карту и CMS как в строке -> проводим транзакцию.
+Общие шаги: готовим карту как в строке → проводим транзакцию.
 
-Предусловие по умолчанию (если строка не говорит иное): карта в системе, баланс и лимиты позволяют реализовать below/equal/above.
+Сводная таблица набора:
 
-Пример развёртки двух строк набора:
+| ID | Строка (card_status, exists, daily, monthly, balance, expiry, terminal, mcc) | Ожидание |
+|---|---|---|
+| TC-PW-01 | EXPIRED, yes, below, below, below, valid, POS, restaurant | отказ 54 (статус EXPIRED) |
+| TC-PW-02 | INACTIVE, yes, below, below, below, current_month, ECOM, restaurant | отказ CARD_INACTIVE |
+| TC-PW-03 | EXPIRED, yes, below, below, below, current_month, ATM, travel | отказ 54 (статус EXPIRED) |
+| TC-PW-04 | INACTIVE, yes, below, below, below, expired, POS, electronics | отказ CARD_INACTIVE |
+| TC-PW-05 | EXPIRED, yes, below, below, below, expired, ECOM, grocery | отказ 54 (статус EXPIRED) |
+| TC-PW-06 | BLOCKED, yes, below, below, below, expired, ATM, restaurant | отказ CARD_BLOCKED |
+| TC-PW-07 | ACTIVE, yes, equal, equal, equal, valid, POS, travel | успех 00, баланс 0 |
+| TC-PW-08 | BLOCKED, yes, below, below, below, current_month, POS, grocery | отказ CARD_BLOCKED |
+| TC-PW-09 | BLOCKED, yes, below, below, below, valid, ECOM, electronics | отказ CARD_BLOCKED |
+| TC-PW-10 | ACTIVE, yes, above, below, above, valid, ATM, grocery | отказ 61 (дневной лимит above) |
+| TC-PW-11 | ACTIVE, yes, equal, equal, above, current_month, ECOM, grocery | отказ 51 (баланс above) |
+| TC-PW-12 | ACTIVE, yes, equal, above, equal, current_month, ATM, electronics | отказ 61 (месячный лимит above) |
+| TC-PW-13 | ACTIVE, yes, above, above, equal, current_month, ECOM, restaurant | отказ 61 (лимиты above) |
+| TC-PW-14 | ACTIVE, yes, below, equal, above, valid, ATM, electronics | отказ 51 (баланс above) |
+| TC-PW-15 | EXPIRED, yes, below, below, below, valid, POS, electronics | отказ 54 (статус EXPIRED) |
+| TC-PW-16 | ACTIVE, yes, below, below, equal, valid, POS, grocery | успех 00, баланс 0 |
+| TC-PW-17 | ACTIVE, no, below, below, below, valid, POS, electronics | отказ 14 (карты нет) |
+| TC-PW-18 | INACTIVE, yes, below, below, below, valid, ATM, travel | отказ CARD_INACTIVE |
+| TC-PW-19 | ACTIVE, yes, equal, above, above, valid, POS, restaurant | отказ 61 (месячный above) |
+| TC-PW-20 | ACTIVE, yes, above, equal, below, current_month, ATM, restaurant | отказ 61 (дневной above) |
+| TC-PW-21 | ACTIVE, no, below, below, below, valid, ATM, restaurant | отказ 14 (карты нет) |
+| TC-PW-22 | BLOCKED, yes, below, below, below, expired, ECOM, travel | отказ CARD_BLOCKED |
+| TC-PW-23 | ACTIVE, no, below, below, below, valid, ECOM, travel | отказ 14 (карты нет) |
+| TC-PW-24 | ACTIVE, yes, above, above, below, current_month, POS, travel | отказ 61 (лимиты above) |
+| TC-PW-25 | ACTIVE, yes, equal, below, below, current_month, ECOM, grocery | успех 00 (equal daily, below monthly/balance) |
+| TC-PW-26 | ACTIVE, yes, below, below, below, expired, POS, grocery | отказ 54 (expiry expired) |
+| TC-PW-27 | ACTIVE, no, below, below, below, valid, ATM, grocery | отказ 14 (карты нет) |
+| TC-PW-28 | ACTIVE, yes, above, above, above, valid, ECOM, electronics | отказ 61 (лимиты above) |
+| TC-PW-29 | ACTIVE, yes, below, above, above, valid, ATM, travel | отказ 61 (месячный above) |
+| TC-PW-30 | INACTIVE, yes, below, below, below, expired, ECOM, grocery | отказ CARD_INACTIVE |
+| TC-PW-31 | ACTIVE, yes, equal, above, below, valid, POS, grocery | отказ 61 (месячный above) |
+
+Пример развёртки двух строк:
 
 #### TC-PW-05 (позитивный, PICT строка 5)
 
@@ -526,3 +564,99 @@ MCC: electronics
 Ожидаемый результат:
 1. Операция отклонена, причина CARD_BLOCKED
 2. Баланс и лимиты не изменились
+
+---
+
+### Попарный набор Card-Management
+
+Общие шаги: выставить карту/тело как в строке → вызвать operation.
+
+| ID | Строка (operation, exists, status, pan, bin, body, patch, amount) | Ожидание |
+|---|---|---|
+| TC-CMS-PW-01 | reserve, yes, INACTIVE, valid_luhn, valid_6, valid, status, below | 200, баланс уменьшен |
+| TC-CMS-PW-02 | patch, no, DELETED, valid_luhn, valid_6, valid, monthly_limit, below | 404 |
+| TC-CMS-PW-03 | generate, no, ACTIVE, valid_luhn, valid_6, empty_required, status, below | ошибка: нет count/bins |
+| TC-CMS-PW-04 | reserve, yes, ACTIVE, valid_luhn, valid_6, negative_number, status, above | ошибка тела / отказ по сумме |
+| TC-CMS-PW-05 | reserve, no, DELETED, valid_luhn, valid_6, valid, status, below | 404 |
+| TC-CMS-PW-06 | list, yes, INACTIVE, valid_luhn, invalid, valid, status, below | ошибка фильтра или пустой список |
+| TC-CMS-PW-07 | get, yes, BLOCKED, invalid_luhn, valid_6, valid, status, below | 404 |
+| TC-CMS-PW-08 | get, yes, ACTIVE, wrong_length, valid_6, valid, status, below | 400/404 |
+| TC-CMS-PW-09 | list, yes, EXPIRED, valid_luhn, valid_6, valid, status, below | 200, в выдаче нет DELETED |
+| TC-CMS-PW-10 | delete, yes, EXPIRED, invalid_luhn, valid_6, valid, status, below | 404 |
+| TC-CMS-PW-11 | patch, yes, EXPIRED, valid_luhn, valid_6, negative_number, daily_limit, below | ошибка валидации |
+| TC-CMS-PW-12 | get, no, DELETED, valid_luhn, valid_6, valid, status, below | 404 |
+| TC-CMS-PW-13 | patch, yes, ACTIVE, valid_luhn, valid_6, empty_required, available_balance, below | 400, пустое тело |
+| TC-CMS-PW-14 | patch, yes, BLOCKED, valid_luhn, valid_6, negative_number, available_balance, below | ошибка валидации |
+| TC-CMS-PW-15 | delete, no, DELETED, valid_luhn, valid_6, valid, status, below | 404 |
+| TC-CMS-PW-16 | list, yes, BLOCKED, valid_luhn, invalid, valid, status, below | ошибка фильтра или пустой список |
+| TC-CMS-PW-17 | patch, yes, EXPIRED, valid_luhn, valid_6, empty_required, available_balance, below | 400 |
+| TC-CMS-PW-18 | patch, yes, INACTIVE, valid_luhn, valid_6, negative_number, monthly_limit, below | ошибка валидации |
+| TC-CMS-PW-19 | get, yes, EXPIRED, wrong_length, valid_6, valid, status, below | 400/404 |
+| TC-CMS-PW-20 | get, yes, INACTIVE, wrong_length, valid_6, valid, status, below | 400/404 |
+| TC-CMS-PW-21 | patch, yes, BLOCKED, valid_luhn, valid_6, empty_required, monthly_limit, below | 400 |
+| TC-CMS-PW-22 | list, yes, ACTIVE, valid_luhn, invalid, valid, status, below | ошибка фильтра или пустой список |
+| TC-CMS-PW-23 | patch, no, DELETED, valid_luhn, valid_6, valid, available_balance, below | 404 |
+| TC-CMS-PW-24 | delete, yes, BLOCKED, wrong_length, valid_6, valid, status, below | 400/404 |
+| TC-CMS-PW-25 | patch, yes, EXPIRED, valid_luhn, valid_6, negative_number, monthly_limit, below | ошибка валидации |
+| TC-CMS-PW-26 | reserve, yes, INACTIVE, valid_luhn, valid_6, empty_required, status, equal | 400, нет amount |
+| TC-CMS-PW-27 | patch, no, DELETED, valid_luhn, valid_6, valid, daily_limit, below | 404 |
+| TC-CMS-PW-28 | patch, yes, INACTIVE, invalid_luhn, valid_6, valid, available_balance, below | 404 |
+| TC-CMS-PW-29 | reserve, yes, BLOCKED, valid_luhn, valid_6, valid, status, above | отказ: сумма > баланса |
+| TC-CMS-PW-30 | patch, yes, ACTIVE, wrong_length, valid_6, valid, available_balance, below | 400/404 |
+| TC-CMS-PW-31 | create, no, ACTIVE, valid_luhn, valid_6, negative_number, status, below | ошибка: отрицательный лимит/баланс |
+| TC-CMS-PW-32 | reserve, yes, EXPIRED, valid_luhn, valid_6, valid, status, equal | 200, баланс 0 |
+| TC-CMS-PW-33 | create, no, ACTIVE, valid_luhn, invalid, valid, status, below | ошибка валидации BIN |
+| TC-CMS-PW-34 | patch, yes, ACTIVE, invalid_luhn, valid_6, valid, monthly_limit, below | 404 |
+| TC-CMS-PW-35 | reserve, yes, EXPIRED, valid_luhn, valid_6, empty_required, status, above | 400, нет amount |
+| TC-CMS-PW-36 | patch, yes, INACTIVE, valid_luhn, valid_6, empty_required, daily_limit, below | 400 |
+| TC-CMS-PW-37 | create, no, ACTIVE, valid_luhn, valid_6, empty_required, status, below | ошибка: нет обязательных полей |
+| TC-CMS-PW-38 | reserve, yes, ACTIVE, valid_luhn, valid_6, negative_number, status, equal | ошибка: отрицательная сумма |
+| TC-CMS-PW-39 | patch, yes, ACTIVE, wrong_length, valid_6, valid, monthly_limit, below | 400/404 |
+| TC-CMS-PW-40 | delete, yes, INACTIVE, invalid_luhn, valid_6, valid, status, below | 404 |
+| TC-CMS-PW-41 | list, yes, DELETED, valid_luhn, invalid, valid, status, below | DELETED в списке нет |
+| TC-CMS-PW-42 | patch, yes, ACTIVE, wrong_length, valid_6, valid, daily_limit, below | 400/404 |
+| TC-CMS-PW-43 | reserve, yes, EXPIRED, wrong_length, valid_6, valid, status, below | 400/404 |
+| TC-CMS-PW-44 | reserve, yes, INACTIVE, valid_luhn, valid_6, valid, status, above | отказ: сумма > баланса |
+| TC-CMS-PW-45 | generate, no, ACTIVE, valid_luhn, valid_6, negative_number, status, below | ошибка: count < 1 |
+| TC-CMS-PW-46 | generate, no, ACTIVE, valid_luhn, invalid, valid, status, below | ошибка валидации BIN |
+| TC-CMS-PW-47 | patch, yes, BLOCKED, invalid_luhn, valid_6, valid, daily_limit, below | 404 |
+| TC-CMS-PW-48 | reserve, yes, BLOCKED, valid_luhn, valid_6, valid, status, equal | 200, баланс 0 |
+| TC-CMS-PW-49 | reserve, yes, BLOCKED, invalid_luhn, valid_6, valid, status, below | 404 |
+| TC-CMS-PW-50 | delete, yes, ACTIVE, invalid_luhn, valid_6, valid, status, below | 404 |
+| TC-CMS-PW-51 | patch, yes, EXPIRED, valid_luhn, valid_6, negative_number, status, below | ошибка валидации |
+| TC-CMS-PW-52 | list, yes, EXPIRED, valid_luhn, invalid, valid, status, below | ошибка фильтра или пустой список |
+
+Пример развёртки:
+
+#### TC-CMS-PW-33 (негативный, PICT строка 32)
+
+Требование: tz/05-card-management.md  
+Источник: PICT, card-management/cases.txt - create, BIN invalid
+
+Предусловие:
+1. CMS доступен
+
+Шаги:
+1. POST /api/cards с BIN `40000`, имя IVAN IVANOV, валюта 643, лимиты и баланс валидные
+
+Ожидаемый результат:
+1. Ошибка валидации
+2. Карта не создана
+
+#### TC-CMS-PW-01 (позитивный, PICT строка 1)
+
+Требование: tz/05-card-management.md  
+Источник: PICT - reserve, карта INACTIVE, сумма ниже баланса
+
+Предусловие:
+1. Карта заведена, статус INACTIVE
+2. Баланс 1000.00
+3. PAN проходит Луна
+
+Шаги:
+1. POST /api/cards/{pan}/reserve, amount = 150.00, rrn из 12 цифр
+
+Ожидаемый результат:
+1. 200 (ТЗ reserve не проверяет статус)
+2. Баланс 850.00
+
