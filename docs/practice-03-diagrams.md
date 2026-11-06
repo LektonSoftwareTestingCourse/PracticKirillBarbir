@@ -184,7 +184,7 @@ CEN --> OEP : save
 OBR ..> OP : findPending
 OP --> OEP : processSingleEvent
 OEP --> OBR : save
-OEP ..> RMQ 
+OEP ..> RMQ
 
 ```
 
