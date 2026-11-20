@@ -35,10 +35,10 @@ public final class SmpMockServer {
     private static final Map<String, Map<String, Object>> LOGGED_TRANSACTIONS = new ConcurrentHashMap<>();
     private static final AtomicLong RRN_COUNTER = new AtomicLong(100000000000L);
     private static final AtomicInteger AUTH_CODE_COUNTER = new AtomicInteger(100000);
-        private static final java.util.Queue<Long> REQUEST_TIMESTAMPS = new java.util.concurrent.ConcurrentLinkedQueue<>();
+    private static final Map<String, java.util.Queue<Long>> IP_REQUEST_TIMESTAMPS = new ConcurrentHashMap<>();
 
     public static void resetRateLimit() {
-        REQUEST_TIMESTAMPS.clear();
+        IP_REQUEST_TIMESTAMPS.clear();
     }
 
     private SmpMockServer() {
@@ -93,7 +93,7 @@ public final class SmpMockServer {
     }
 
     private static void startGatewayServer(int port) throws IOException {
-        HttpServer server = HttpServer.create(new InetSocketAddress(port), 0);
+        HttpServer server = HttpServer.create(new InetSocketAddress(port), 500);
         server.createContext("/health", exchange -> {
             Map<String, Object> resp = new HashMap<>();
             resp.put("status", "ok");
@@ -113,7 +113,7 @@ public final class SmpMockServer {
         server.createContext("/api/dashboard", new DashboardHandler());
         server.createContext("/api/simulator/terminal", new TerminalHandler());
         server.createContext("/api/simulator/merchant", new MerchantHandler());
-        server.setExecutor(null);
+        server.setExecutor(java.util.concurrent.Executors.newCachedThreadPool());
         server.start();
         RUNNING_SERVERS.add(server);
     }
@@ -500,11 +500,17 @@ public final class SmpMockServer {
                 return;
             }
 
-            long now = System.currentTimeMillis();
-            while (!REQUEST_TIMESTAMPS.isEmpty() && now - REQUEST_TIMESTAMPS.peek() > 1000) {
-                REQUEST_TIMESTAMPS.poll();
+            String clientIp = ex.getRequestHeaders().getFirst("X-Forwarded-For");
+            if (clientIp == null || clientIp.isBlank()) {
+                clientIp = ex.getRemoteAddress() != null ? ex.getRemoteAddress().getAddress().getHostAddress() : "default";
             }
-            if (REQUEST_TIMESTAMPS.size() >= 100) {
+            java.util.Queue<Long> timestamps = IP_REQUEST_TIMESTAMPS.computeIfAbsent(
+                    clientIp, k -> new java.util.concurrent.ConcurrentLinkedQueue<>());
+            long now = System.currentTimeMillis();
+            while (!timestamps.isEmpty() && now - timestamps.peek() > 1000) {
+                timestamps.poll();
+            }
+            if (timestamps.size() >= 100) {
                 ex.getResponseHeaders().set("Retry-After", "1");
                 Map<String, Object> err = Map.of(
                         "error", "RATE_LIMIT_EXCEEDED",
@@ -514,7 +520,7 @@ public final class SmpMockServer {
                 sendJson(ex, 429, err);
                 return;
             }
-            REQUEST_TIMESTAMPS.add(now);
+            timestamps.add(now);
 
             String[] required = {"mti", "stan", "pan", "processingCode", "currencyCode",
                     "transmissionDateTime", "terminalId", "merchantId", "mcc", "acquirerId"};
