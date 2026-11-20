@@ -13,7 +13,7 @@ public final class DataGenerator {
     private DataGenerator() {
     }
 
-    
+
     public static String generatePan(String bin) {
         String baseBin = (bin != null && bin.length() == 6) ? bin : "400000";
         long accountPart = (PAN_COUNTER.incrementAndGet() % 1000000000L);
@@ -22,32 +22,32 @@ public final class DataGenerator {
         return prefix + checksum;
     }
 
-    
+
     public static String generateStan() {
         long value = STAN_COUNTER.incrementAndGet() % 1000000L;
         return String.format("%06d", value);
     }
 
-    
+
     public static String generateRrn() {
         long timestampPart = System.currentTimeMillis() % 100000000L;
         int randomPart = 1000 + RANDOM.nextInt(9000);
         return String.format("%08d%04d", timestampPart, randomPart);
     }
 
-    
+
     public static String generateTerminalId() {
         int id = 1000 + RANDOM.nextInt(9000);
         return "TERM" + id;
     }
 
-    
+
     public static String generateMerchantId() {
         int part = 100000 + RANDOM.nextInt(900000);
         return "MERCH" + part + "001";
     }
 
-    
+
     public static String generateUuid() {
         return UUID.randomUUID().toString();
     }

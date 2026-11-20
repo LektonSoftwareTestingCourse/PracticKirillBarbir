@@ -57,7 +57,7 @@ public final class TestConfig {
         return getPropertyOrEnv("notification.url", "NOTIFICATION_URL", DEFAULT_NOTIFICATION_URL);
     }
 
-    
+
     public static synchronized boolean isLiveStackRunning() {
         if (liveStackDetected != null) {
             return liveStackDetected;

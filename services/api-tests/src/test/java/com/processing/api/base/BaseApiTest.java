@@ -94,7 +94,7 @@ public abstract class BaseApiTest {
                 .build();
     }
 
-    
+
     protected String createCardViaApi(BigDecimal balance, BigDecimal dailyLimit) {
         String pan = DataGenerator.generatePan("400000");
         Map<String, Object> body = CardRequestBuilder.aCard()
@@ -112,7 +112,7 @@ public abstract class BaseApiTest {
         return response.then().extract().path("pan");
     }
 
-    
+
     protected String createDefaultActiveCard() {
         return createCardViaApi(new BigDecimal("1000000"), new BigDecimal("15000000"));
     }

@@ -14,7 +14,7 @@ public final class JsonSchemaValidator {
     private JsonSchemaValidator() {
     }
 
-    
+
     public static void assertCardSchema(String jsonResponse) {
         JsonNode root = parse(jsonResponse);
         assertTrue(root.isObject(), "Root must be an object");
@@ -32,7 +32,7 @@ public final class JsonSchemaValidator {
         assertField(root, "createdAt", JsonNode::isTextual);
     }
 
-    
+
     public static void assertAuthorizationResponseSchema(String jsonResponse) {
         JsonNode root = parse(jsonResponse);
         assertTrue(root.isObject(), "Root must be an object");
@@ -44,7 +44,7 @@ public final class JsonSchemaValidator {
         assertField(root, "processingTimeMs", JsonNode::isNumber);
     }
 
-    
+
     public static void assertHealthResponseSchema(String jsonResponse) {
         JsonNode root = parse(jsonResponse);
         assertTrue(root.isObject(), "Root must be an object");
@@ -59,7 +59,7 @@ public final class JsonSchemaValidator {
         assertField(services, "logger", JsonNode::isTextual);
     }
 
-    
+
     public static void assertErrorResponseSchema(String jsonResponse) {
         JsonNode root = parse(jsonResponse);
         assertTrue(root.isObject(), "Root must be an object");
